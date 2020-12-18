@@ -1,0 +1,27 @@
+# This is an example input file to calculate the density of states
+# (DOS) of a 64mer (2D) HP model protein using Wang-Landau sampling
+
+
+RngType  2
+RngSeed  5
+
+HPModelDimension  2
+OccupancyFieldType  0
+MoveFractions  0.75  0.98
+
+HistogramDims  1  1
+HistogramSpecs  0  80  1
+
+MCAlgorithm  0
+PhysicalModel 0
+ModFactorInit  1.0
+ModFactorDivider  2.0
+ModFactorThreshold  1.0e-8
+HistogramCheckInterval  1000000
+FlatnessMeasure  0.80
+
+
+# Seq2D64   (max contacts = 42)
+HPSequence  HHHHHHHHHHHHPHPHPPHHPPHHP
+HPSequence  PHPPHHPPHHPPHPPHHPPHHPPHP
+HPSequence  HPHHHHHHHHHHHH
