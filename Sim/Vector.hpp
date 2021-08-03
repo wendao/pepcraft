@@ -146,6 +146,7 @@ public:
   CoordsType Get(int);
   void Print();
   void PrintInt();
+  int getL();
 
   void Copy(const Vector&);
   void Copy(const Vector&, const Vector&);

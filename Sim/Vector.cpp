@@ -75,6 +75,11 @@ void Vector::PrintInt()
   fprintf(stderr, "\n");
 }
 
+int Vector::getL()
+{
+  return dim;
+}
+
 void Vector::Copy(const Vector& v)
 {
   int i;

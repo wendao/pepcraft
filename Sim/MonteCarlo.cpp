@@ -393,6 +393,11 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
   unsigned long int n;
   long int prev, cur;
 
+  //for native
+  unsigned int L = m->get_current_conf()->getL();
+  Vector *nat = new Vector(L);
+  bool degeneracy = false;
+
   if ((!RestartFlag) && (MaskAllFlag)) h -> MaskAll();
 
   m -> PrintObservables();
@@ -426,11 +431,43 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
             //m -> WriteState(1, "confsEmin.mol2");
             //m -> WriteState(3, "confsEmin.xyz");
             m -> WriteState(2, "confsEmin.pdb");
-            m->get_current_conf()->PrintInt();
+            // save native
+            nat->Copy( *m->get_current_conf() );
+            fprintf(stderr, "min:\n");
+            nat->PrintInt();
+            degeneracy = true;
           }
-          else if (-m -> observable[0] == Emin) {
-            // check if it is the same as the saved one
-            m->get_current_conf()->PrintInt();
+          else if (-m -> observable[0] == Emin && degeneracy) {
+            // check if it is the same as the native
+            // Notes: mirror conf 0 <-> 2
+            // stop checking if degeneracy==false
+            bool uniq = true;
+            Vector *cur_conf = m->get_current_conf();
+            //identical
+            for (int i=0; i<L; i++) {
+              if (nat->Elem(i) != cur_conf->Elem(i)) {
+                uniq = false;
+                break;
+              }
+            }
+
+            if (!uniq) {
+              //mirror
+              uniq = true;
+              for (int i=0; i<L; i++) {
+                if (nat->Elem(i)+cur_conf->Elem(i)!=2) {
+                  //fprintf(stderr, "%ld <-> %ld\n", nat->Elem(i), cur_conf->Elem(i));
+                  uniq = false;
+                  break;
+                }
+              }
+
+              if (!uniq){
+                degeneracy = false;
+                fprintf(stderr, "new:\n");
+                cur_conf->PrintInt();
+              }
+            }
           }
           h -> CheckItinerancy(prev, MCMoves, MCMovesMem);
         }
@@ -470,9 +507,15 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
   printf("Accepted MC moves = %lu\n", MCMovesAccepted);
   printf("Acceptance ratio = %15.8e\n", double(MCMovesAccepted) / double(MCMoves));
 
+  if (degeneracy) {
+    fprintf(stderr, "Native conformation found!\n");
+    nat->PrintInt();
+  }
+
   h -> SaveState(0, "hdata_final.dat");
   h -> PrintNormDOS("dos.dat");
 
+  delete nat;
 }
 
 
@@ -533,17 +576,17 @@ void MonteCarlo::MetropolisSampling(Model* m)
 
       if (gsl_rng_uniform(rng) < (exp(double(prev - cur) / SamplingTemperature))) {
 
-	prev = cur;
-	MCMovesAccepted++;
+        prev = cur;
+        MCMovesAccepted++;
 
-	if (-m -> observable[0] < Emin) {
-	  Emin = -m -> observable[0];
-	  printf("New Emin = %ld ( MC moves = %lu )\n", Emin, MCMoves);
-	  fflush(stdout);
-	  //m -> WriteState(1, "confsEmin.mol2");
-	  //m -> WriteState(3, "confsEmin.xyz");
-    m -> WriteState(2, "confsEmin.pdb");
-	}
+        if (-m -> observable[0] < Emin) {
+          Emin = -m -> observable[0];
+          printf("New Emin = %ld ( MC moves = %lu )\n", Emin, MCMoves);
+          fflush(stdout);
+          //m -> WriteState(1, "confsEmin.mol2");
+          //m -> WriteState(3, "confsEmin.xyz");
+          m -> WriteState(2, "confsEmin.pdb");
+        }
 
       }
 
