@@ -123,7 +123,8 @@ private:
   // same for temporary storage
   Vector** tmpcoords;
   // pointer to 1D conf vecotor
-  Vector* conf;
+  Vector* confG;
+  Vector* confL;
 
   // Contact map: save the Emin structures' obs
   // if all Emins have the same obs, we call it designable

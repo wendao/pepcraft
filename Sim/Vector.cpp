@@ -67,6 +67,14 @@ void Vector::Print()
   printf("\n");
 }
 
+void Vector::PrintInt()
+{
+  int i;
+  for (i = 0; i < dim; i++)
+    fprintf(stderr, "%ld", c[i]);
+  fprintf(stderr, "\n");
+}
+
 void Vector::Copy(const Vector& v)
 {
   int i;

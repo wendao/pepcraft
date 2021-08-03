@@ -82,7 +82,8 @@ private:
   // same for temporary storage
   Vector** tmpcoords;
   // pointer to 1D conf vecotor
-  Vector *conf;
+  Vector *confG;
+  Vector *confL;
 
   // pointers to arrays of monomer locations in the d-dimensional
   // occupancy field

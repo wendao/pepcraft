@@ -132,8 +132,10 @@ HPModel::HPModel(const char* filename)
   seq = new MonomerType[NumberOfMonomers];
   coords = new Vector*[NumberOfMonomers];
   tmpcoords = new Vector*[NumberOfMonomers];
+  //0:Up; 1:Right; 2:Down; 3:Left
+  confG = new Vector(NumberOfMonomers-1);
   //0: left; 1:forward; 2:right; 3:backward
-  conf = new Vector(NumberOfMonomers-2);
+  confL = new Vector(NumberOfMonomers-2);
   //Emin_contact_map = new Matrix(NumberOfMonomers, NumberOfMonomers);
 
   for (n = 0; n < NumberOfMonomers; n++) {
@@ -268,7 +270,8 @@ HPModel::~HPModel()
   }
   delete[] coords;
   delete[] tmpcoords;
-  delete conf;
+  delete confG;
+  delete confL;
 
   delete OccupancyField;
 
@@ -1408,7 +1411,60 @@ void HPModel::BondRebridgingMove()
 }
 
 Vector *HPModel::get_current_conf() {
-  return conf;
+  //global conf of the first bond
+  if (coords[0]->Elem(0) < coords[1]->Elem(0)) {
+    confG->Elem(0) = 1;
+  }
+  else if(coords[0]->Elem(0) > coords[1]->Elem(0)) {
+    confG->Elem(0) = 3;
+  }
+  else if(coords[0]->Elem(1) > coords[1]->Elem(1)) {
+    confG->Elem(0) = 2;
+  }
+  else if(coords[0]->Elem(1) < coords[1]->Elem(1)) {
+    confG->Elem(0) = 0;
+  }
+  else {
+    ErrorMsg(8);
+  }
+  
+  for (int i=2; i<NumberOfMonomers; i++) {
+    //global conf
+    if (coords[i-1]->Elem(0) < coords[i]->Elem(0)) {
+      confG->Elem(i-1) = 1;
+    }
+    else if(coords[i-1]->Elem(0) > coords[i]->Elem(0)) {
+      confG->Elem(i-1) = 3;
+    }
+    else if(coords[i-1]->Elem(1) > coords[i]->Elem(1)) {
+      confG->Elem(i-1) = 2;
+    }
+    else if(coords[i-1]->Elem(1) < coords[i]->Elem(1)) {
+      confG->Elem(i-1) = 0;
+    }
+    else {
+      ErrorMsg(8);
+    }
+
+    //confL[i-2], depend on confG[i-2] and confG[i-1]
+    if (confG->Elem(i-2) == confG->Elem(i-1)) {
+      confL->Elem(i-2) = 1;
+    }
+    else if (confG->Elem(i-2)-confG->Elem(i-1)==-1 ||confG->Elem(i-2)-confG->Elem(i-1)==3) {
+      confL->Elem(i-2) = 0;
+    }
+    else if (confG->Elem(i-2)-confG->Elem(i-1)==1 ||confG->Elem(i-2)-confG->Elem(i-1)==-3) {
+      confL->Elem(i-2) = 2;
+    }
+    else if (confG->Elem(i-2)-confG->Elem(i-1)==2 || confG->Elem(i-2)-confG->Elem(i-1)==-2) {
+      confL->Elem(i-2) = 3;
+    }
+    else {
+      ErrorMsg(8);
+    }
+
+  }
+  return confL;
 }
 
 void HPModel::PivotMove()

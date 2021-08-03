@@ -426,9 +426,11 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
             //m -> WriteState(1, "confsEmin.mol2");
             //m -> WriteState(3, "confsEmin.xyz");
             m -> WriteState(2, "confsEmin.pdb");
+            m->get_current_conf()->PrintInt();
           }
           else if (-m -> observable[0] == Emin) {
             // check if it is the same as the saved one
+            m->get_current_conf()->PrintInt();
           }
           h -> CheckItinerancy(prev, MCMoves, MCMovesMem);
         }
@@ -457,7 +459,7 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
     //else printf("Histogram not flat ( MC moves = %lu )\n", MCMoves);
 
     h -> SaveState();
-    m -> WriteState(4, "coords_current.xyz");
+    //m -> WriteState(4, "coords_current.xyz");
     SaveMCState();
     fflush(stdout);
 
@@ -495,21 +497,21 @@ void MonteCarlo::MetropolisSampling(Model* m)
 
       if (m -> MoveProposal) {
 
-	cur = -(m -> observable[0]);
+        cur = -(m -> observable[0]);
 
-	if (gsl_rng_uniform(rng) < (exp(double(prev - cur) / SamplingTemperature))) {
+        if (gsl_rng_uniform(rng) < (exp(double(prev - cur) / SamplingTemperature))) {
 
-	  prev = cur;
+          prev = cur;
 
-	}
+        }
 
-	else m -> UnDoMCMove();
+        else m -> UnDoMCMove();
 
       }
 
       if ((n % MeasuringInterval) == 0) {
-	printf("%lu %ld\n", n, m -> observable[0]);
-	fflush(stdout);
+        printf("%lu %ld\n", n, m -> observable[0]);
+        fflush(stdout);
       }
 
     }
@@ -554,7 +556,8 @@ void MonteCarlo::MetropolisSampling(Model* m)
       printf("\nMetropolis sampling: %lu MC moves\n", MCMoves);
       m -> PrintObservables();
       printf("\n");
-      m -> WriteState(4, "coords_current.xyz");
+      //m -> WriteState(4, "coords_current.xyz");
+      m -> get_current_conf() -> PrintInt();
       SaveMCState();
       fflush(stdout);
 

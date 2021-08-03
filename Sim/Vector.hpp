@@ -145,6 +145,7 @@ public:
   void Set(int, const CoordsType);
   CoordsType Get(int);
   void Print();
+  void PrintInt();
 
   void Copy(const Vector&);
   void Copy(const Vector&, const Vector&);
