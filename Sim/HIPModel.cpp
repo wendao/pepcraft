@@ -111,6 +111,8 @@ HIPModel::HIPModel(const char* filename)
   seq = new MonomerType[NumberOfMonomers];
   coords = new Vector*[NumberOfMonomers];
   tmpcoords = new Vector*[NumberOfMonomers];
+  //0: left; 1:forward; 2:right; 3:backward
+  conf = new Vector(NumberOfMonomers-2);
 
   for (n = 0; n < NumberOfMonomers; n++) {
     coords[n] = new Vector(PolymerDim);
@@ -244,6 +246,7 @@ HIPModel::~HIPModel()
   }
   delete[] coords;
   delete[] tmpcoords;
+  delete conf;
 
   delete OccupancyField;
 
@@ -1283,6 +1286,9 @@ void HIPModel::BondRebridgingMove()
 
 }
 
+Vector *HIPModel::get_current_conf() {
+  return conf;
+}
 
 void HIPModel::PivotMove()
 {

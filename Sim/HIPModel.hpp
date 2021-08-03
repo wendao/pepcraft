@@ -22,6 +22,7 @@ public:
   void WriteState(int = 0, const char* = NULL);
   void DoMCMove();
   void UnDoMCMove();
+  Vector *get_current_conf();
 
 private:
 
@@ -80,6 +81,8 @@ private:
   Vector** coords;
   // same for temporary storage
   Vector** tmpcoords;
+  // pointer to 1D conf vecotor
+  Vector *conf;
 
   // pointers to arrays of monomer locations in the d-dimensional
   // occupancy field

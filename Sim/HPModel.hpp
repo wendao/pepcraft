@@ -63,6 +63,7 @@ public:
   void WriteState(int = 0, const char* = NULL);
   void DoMCMove();
   void UnDoMCMove();
+  Vector *get_current_conf();
 
 private:
 
@@ -121,9 +122,12 @@ private:
   Vector** coords;
   // same for temporary storage
   Vector** tmpcoords;
+  // pointer to 1D conf vecotor
+  Vector* conf;
+
   // Contact map: save the Emin structures' obs
   // if all Emins have the same obs, we call it designable
-  Matrix *Emin_contact_map;
+  //Matrix *Emin_contact_map;
   bool designable;
 
   // pointers to arrays of monomer locations in the d-dimensional

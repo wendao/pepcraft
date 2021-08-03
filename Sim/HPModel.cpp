@@ -132,12 +132,14 @@ HPModel::HPModel(const char* filename)
   seq = new MonomerType[NumberOfMonomers];
   coords = new Vector*[NumberOfMonomers];
   tmpcoords = new Vector*[NumberOfMonomers];
-  Emin_contact_map = new Matrix(NumberOfMonomers, NumberOfMonomers);
+  //0: left; 1:forward; 2:right; 3:backward
+  conf = new Vector(NumberOfMonomers-2);
+  //Emin_contact_map = new Matrix(NumberOfMonomers, NumberOfMonomers);
 
   for (n = 0; n < NumberOfMonomers; n++) {
     coords[n] = new Vector(PolymerDim);
     tmpcoords[n] = new Vector(PolymerDim);
-    coords[n] -> Elem(0) = n; //x-axis
+    coords[n] -> Elem(0) = n; //x-axis, straight line
     switch (sHP[n]) {
     case 'P' : {seq[n] = polar; break;}
     case 'H' : {seq[n] = hydrophobic; break;}
@@ -266,6 +268,7 @@ HPModel::~HPModel()
   }
   delete[] coords;
   delete[] tmpcoords;
+  delete conf;
 
   delete OccupancyField;
 
@@ -1404,6 +1407,9 @@ void HPModel::BondRebridgingMove()
 
 }
 
+Vector *HPModel::get_current_conf() {
+  return conf;
+}
 
 void HPModel::PivotMove()
 {

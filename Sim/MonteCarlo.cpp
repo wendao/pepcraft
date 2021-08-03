@@ -408,38 +408,39 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
 
       if (m -> MoveProposal) {
 
-	cur = h -> GetIndex(m -> observable);
+        cur = h -> GetIndex(m -> observable);
 
-	if ((cur >= 0) && (gsl_rng_uniform(rng) < (exp(h -> GetDOS(prev) - h -> GetDOS(cur))))) {
+        if ((cur >= 0) && (gsl_rng_uniform(rng) < (exp(h -> GetDOS(prev) - h -> GetDOS(cur))))) {
 
-	  prev = cur;
-	  MCMovesAccepted++;
+          prev = cur;
+          MCMovesAccepted++;
 
-	  // in the "HPModel" class the measured observable is "number
-	  // of non-bonded HH contacts"; the energy is minus this
-	  // quantity, therefore the minus sign
-	  // --> needs to be adapted for each physical model
-	  if (-m -> observable[0] < Emin) {
-	    Emin = -m -> observable[0];
-	    printf("New Emin = %ld ( MC moves = %lu )\n", Emin, MCMoves);
-	    fflush(stdout);
-	    //m -> WriteState(1, "confsEmin.mol2");
-	    //m -> WriteState(3, "confsEmin.xyz");
-      m -> WriteState(2, "confsEmin.pdb");
-	  }
-
-	  h -> CheckItinerancy(prev, MCMoves, MCMovesMem);
-
-	}
-
-	else m -> UnDoMCMove();
+          // in the "HPModel" class the measured observable is "number
+          // of non-bonded HH contacts"; the energy is minus this
+          // quantity, therefore the minus sign
+          // --> needs to be adapted for each physical model
+          if (-m -> observable[0] < Emin) {
+            Emin = -m -> observable[0];
+            printf("New Emin = %ld ( MC moves = %lu )\n", Emin, MCMoves);
+            fflush(stdout);
+            //m -> WriteState(1, "confsEmin.mol2");
+            //m -> WriteState(3, "confsEmin.xyz");
+            m -> WriteState(2, "confsEmin.pdb");
+          }
+          else if (-m -> observable[0] == Emin) {
+            // check if it is the same as the saved one
+          }
+          h -> CheckItinerancy(prev, MCMoves, MCMovesMem);
+        }
+        else m -> UnDoMCMove();
 
       }
 
       h -> Update(prev, n, DOSUpdateType, ModFactor);
 
-      if ((DOSDumpInterval) && ((MCMoves % DOSDumpInterval) == 0))
-	h -> SaveState(MCMoves / DOSDumpInterval, NULL, false);
+      if ((DOSDumpInterval) && ((MCMoves % DOSDumpInterval) == 0)) {
+        h -> SaveState(MCMoves / DOSDumpInterval, NULL, false);
+      }
 
     }
 

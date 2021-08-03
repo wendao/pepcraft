@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "Vector.hpp"
 #include "Histogram.hpp"
 
 
@@ -55,6 +56,8 @@ public:
   // undoes a Monte Carlo trial move in case of rejection due to the
   // Wang-Landau / Metropolis acceptance criterion
   virtual void UnDoMCMove() = 0;
+  // get current 1D conf
+  virtual Vector *get_current_conf() = 0;
 
   void PrintObservables(FILE* f = stdout) {
 
