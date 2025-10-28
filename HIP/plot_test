@@ -1,0 +1,11 @@
+set title "Mirrored Energy Distribution"
+set xlabel "Energy"
+set ylabel "Normalized Count"
+#set grid
+set key right top
+#set border 15
+set xzeroaxis lt -1 lw 2
+plot "E_L32_des.hist" u 2:($1/471) w l title "HIP-L32 designable", \
+     "E_L32_undes.hist" u 2:($1/(10000-471)) w l title "HIP-L32 undesignable", \
+     "../HP/E_L32_des.hist" u 2:(-$1/203) w l title "HP-L32 designable", \
+     "../HP/E_L32_undes.hist" u 2:(-$1/(10000-203)) w l title "HP-L32 undesignable"
