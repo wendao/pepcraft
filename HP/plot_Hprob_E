@@ -1,0 +1,11 @@
+a = 2
+set xrange [0.1:0.9]
+set key left bottom
+plot \
+     "<./count_HP.sh /home/wendao/work/Lattice/HP-enumeration/datasets/HPn16.seq" u ($2/($2+$4)):($5/4**a) w p pt 6 t "L=16", \
+     "<./count_HP.sh /home/wendao/work/Lattice/HP-enumeration/datasets/HPn25.seq" u ($2/($2+$4)):($5/5**a) w p pt 6 t "L=25", \
+     "<./count_HP.sh rand_seq36.txt" u ($2/($2+$4)):($5/6**a) w p pt 6 t "L=36", \
+     "<./count_HP.sh rand_seq49.txt" u ($2/($2+$4)):($5/7**a) w p pt 6 t "L=49", \
+     "<./count_HP.sh rand_seq64.txt" u ($2/($2+$4)):($5/8**a) w p pt 6 t "L=64", \
+     "<./count_HP.sh rand_seq81.txt" u ($2/($2+$4)):($5/9**a) w p pt 6 t "L=81", \
+     "<./count_HP.sh rand_seq100.txt" u ($2/($2+$4)):($5/10**a) w p pt 6 t "L=100"
