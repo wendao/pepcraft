@@ -64,6 +64,7 @@ public:
   void DoMCMove();
   void UnDoMCMove();
   Vector *get_current_conf();
+  void WriteConfPDB(Vector* conf, FILE* f);
 
 private:
 

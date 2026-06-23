@@ -441,6 +441,47 @@ start with.
   >
   > integer value >= 1 (1000000)
 
+#### Input parameter for folding / degeneracy analysis:
+
+- `DegeneracyThreshold`
+
+  > maximal number of distinct ground state (Emin) conformations (K)
+  >
+  > integer value >= 1 (1)
+  >
+  > During Wang-Landau sampling, all distinct conformations found at
+    the current global energy minimum (Emin) are recorded (mirror
+    images on the lattice are considered identical). Whenever a new,
+    lower Emin is found, the recorded conformations are discarded and
+    recording starts anew. At the end of the simulation:
+  >
+  > - if the number of distinct ground state conformations is <= K,
+      the sequence is judged **FOLDABLE** and all of these
+      conformations are reported;
+  > - if it exceeds K, the sequence is judged **UNFOLDED** (the
+      individual conformations are not reported).
+  >
+  > Once more than K distinct ground state conformations have been
+    found for the current Emin, recording stops and no further
+    conformations are collected until a new, lower Emin is
+    encountered.
+  >
+  > **Known limitation (restart / check-pointing):** The list of
+    recorded ground state conformations and the folded/unfolded flag
+    are kept only in memory; they are **not** written to the restart
+    files. Although `Emin` itself is restored on restart, the recorded
+    conformations are not. After a restart, conformation recording
+    therefore begins again from scratch and relies on the continued
+    sampling to re-visit the ground states. If some ground state
+    conformations are only sampled before the checkpoint and never
+    again afterwards, the reported degeneracy may be incomplete (a
+    sequence could be mislabeled FOLDABLE, or the reported list of
+    conformations could be incomplete). For a reliable folding /
+    degeneracy analysis, run the Wang-Landau simulation to completion
+    in a single run. (Restarts are rarely needed in practice; making
+    the recorded conformations check-point safe is left as a possible
+    future improvement.)
+
 #### Input parameters for Metropolis sampling:
 
 - `EquilibrationMCSteps`
@@ -497,10 +538,17 @@ model:
   > **Note:** The exact output varies depending on the selection of
     the Monte Carlo algorithm and physical model.
 
-- `confsEmin.xyz`
+- `confsEmin.pdb`
 
-  > stores the coordinates of each newly found minimal energy HP model
-    conformation
+  > written only at the **end** of a Wang-Landau simulation and only if
+    the sequence is judged **FOLDABLE**. It is a single multi-MODEL PDB
+    file containing all (<= K) distinct ground state conformations (one
+    `MODEL` block each). If the sequence is **UNFOLDED**, no file is
+    produced (and any stale file from a previous run is removed).
+  >
+  > **Note:** No intermediate ground state structures are written
+    during sampling anymore; only the final set of conformations is
+    output.
 
 - `coords_current.xyz`
 - `hdata_current.dat`
@@ -535,6 +583,16 @@ model:
 
   > final histogram data (same as `hdata_current.dat` upon completion
     of the Wang-Landau simulation)
+
+- `fold_result.txt`
+
+  > result of the folding / degeneracy analysis (Wang-Landau sampling
+    only); contains the ground state energy (`Emin`), the
+    `DegeneracyThreshold` (K) used, the number of distinct ground
+    state conformations found (`Degeneracy`), the overall result
+    (`FOLDABLE` or `UNFOLDED`), and, if `FOLDABLE`, all distinct
+    ground state conformations (each as a sequence of local-direction
+    codes, one per line)
 
 ---
 

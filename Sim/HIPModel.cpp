@@ -1346,6 +1346,58 @@ Vector *HIPModel::get_current_conf() {
   return confL;
 }
 
+// Reconstruct 2D lattice coordinates from a local-direction-code
+// conformation 'conf' (as returned by get_current_conf()) and write a
+// single PDB MODEL block to the already-open file stream 'f'. Because
+// the local code is rotation/translation invariant, the reconstructed
+// shape is determined only up to a global rotation/translation, which
+// is irrelevant for visualization.
+void HIPModel::WriteConfPDB(Vector* conf, FILE* f)
+{
+
+  int n;
+
+  // local code -> change of global direction (mod 4):
+  // 0 -> +1, 1 (straight) -> 0, 2 -> +3, 3 -> +2
+  static const int dG[4] = {1, 0, 3, 2};
+  // global direction -> step: 0:+y, 1:+x, 2:-y, 3:-x
+  static const int dx[4] = {0, 1, 0, -1};
+  static const int dy[4] = {1, 0, -1, 0};
+
+  long int* cx = new long int[NumberOfMonomers];
+  long int* cy = new long int[NumberOfMonomers];
+
+  cx[0] = 0;
+  cy[0] = 0;
+  int g = 1;  // arbitrary starting global direction for the first bond
+  for (n = 1; n < NumberOfMonomers; n++) {
+    if (n >= 2) g = (g + dG[conf->Elem(n - 2)]) % 4;
+    cx[n] = cx[n - 1] + dx[g];
+    cy[n] = cy[n - 1] + dy[g];
+  }
+
+  fprintf(f, "MODEL\n");
+  for (n = 0; n < NumberOfMonomers; n++) {
+    if (seq[n] == polar)
+      fprintf(f, "ATOM   %4d  O           0", n + 1);
+    else
+      fprintf(f, "ATOM   %4d  P           0", n + 1);
+    fprintf(f, " %9.2f %9.2f %9.2f\n",
+	    10.0 * (double)(cx[n] - cx[0]),
+	    10.0 * (double)(cy[n] - cy[0]),
+	    0.0);
+  }
+  fprintf(f, "CONECT %4d %4d\n", 1, 2);
+  for (n = 2; n < NumberOfMonomers; n++)
+    fprintf(f, "CONECT %4d %4d %4d\n", n, n - 1, n + 1);
+  fprintf(f, "CONECT %4d %4d\n", NumberOfMonomers, NumberOfMonomers - 1);
+  fprintf(f, "ENDMDL\n\n");
+
+  delete[] cx;
+  delete[] cy;
+
+}
+
 void HIPModel::PivotMove()
 {
 

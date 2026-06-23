@@ -58,6 +58,11 @@ public:
   virtual void UnDoMCMove() = 0;
   // get current 1D conf
   virtual Vector *get_current_conf() = 0;
+  // write one PDB MODEL block reconstructed from a local-direction-code
+  // conformation 'conf' (as returned by get_current_conf()) to the
+  // already-open file stream 'f'; used by the folding analysis to
+  // output the recorded ground state conformations
+  virtual void WriteConfPDB(Vector* conf, FILE* f) = 0;
 
   void PrintObservables(FILE* f = stdout) {
 

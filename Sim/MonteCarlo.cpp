@@ -25,6 +25,7 @@
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#include <vector>
 
 #include "Globals.hpp"
 #include "MonteCarlo.hpp"
@@ -61,6 +62,8 @@ MonteCarlo::MonteCarlo(const char* filename)
   SamplingMCSteps = 0;
   MeasuringInterval = 1;
   SamplingTemperature = 1.0;
+  // ground state degeneracy / folding analysis
+  DegeneracyThreshold = 1;
 
   // read 'MonteCarlo' class parameters from input file
   f = fopen(filename, "r");
@@ -175,6 +178,12 @@ MonteCarlo::MonteCarlo(const char* filename)
 	  continue;
 	}
 
+	if (!strcmp(pname, "DegeneracyThreshold")) {
+	  if (sscanf(line, "%*50s %d", &DegeneracyThreshold) != 1) ErrorMsg(2, pname);
+	  if (DegeneracyThreshold < 1) ErrorMsg(3, pname);
+	  continue;
+	}
+
       }
 
       else ErrorMsg(4);
@@ -279,6 +288,9 @@ MonteCarlo::MonteCarlo(const char* filename)
   }
 
   }
+
+  printf("\nFolding Analysis:\n\n");
+  printf(" Degeneracy Threshold (K)  %d\n", DegeneracyThreshold);
 
   printf("\nAlgorithm Initialization:\n\n");
   printf(" MCMoves  %lu\n", MCMoves);
@@ -393,10 +405,14 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
   unsigned long int n;
   long int prev, cur;
 
-  //for native
+  // distinct ground state (Emin) conformations recorded so far (for
+  // the folding/degeneracy analysis); cleared whenever a new, lower
+  // Emin is found
   unsigned int L = m->get_current_conf()->getL();
-  Vector *nat = new Vector(L);
-  bool degeneracy = false;
+  std::vector<Vector*> EminConfs;
+  // becomes true once more than 'DegeneracyThreshold' distinct ground
+  // state conformations have been found for the current Emin
+  bool Unfolded = false;
 
   if ((!RestartFlag) && (MaskAllFlag)) h -> MaskAll();
 
@@ -425,49 +441,57 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
           // quantity, therefore the minus sign
           // --> needs to be adapted for each physical model
           if (-m -> observable[0] < Emin) {
+
             Emin = -m -> observable[0];
-            printf("New Emin = %ld ( MC moves = %lu )\n", Emin, MCMoves);
-            fflush(stdout);
-            //m -> WriteState(1, "confsEmin.mol2");
-            //m -> WriteState(3, "confsEmin.xyz");
-            m -> WriteState(2, "confsEmin.pdb");
-            // save native
-            nat->Copy( *m->get_current_conf() );
-            fprintf(stderr, "min:\n");
-            nat->PrintInt();
-            degeneracy = true;
+
+            // a new (lower) ground state energy was found: discard
+            // all previously recorded ground state conformations and
+            // start recording conformations for the new Emin
+            for (size_t k = 0; k < EminConfs.size(); k++) delete EminConfs[k];
+            EminConfs.clear();
+            Unfolded = false;
+            EminConfs.push_back(new Vector(*(m -> get_current_conf())));
+
           }
-          else if (-m -> observable[0] == Emin && degeneracy) {
-            // check if it is the same as the native
-            // Notes: mirror conf 0 <-> 2
-            // stop checking if degeneracy==false
-            bool uniq = true;
-            Vector *cur_conf = m->get_current_conf();
-            //identical
-            for (int i=0; i<L; i++) {
-              if (nat->Elem(i) != cur_conf->Elem(i)) {
-                uniq = false;
-                break;
-              }
-            }
+          else if (-m -> observable[0] == Emin && !Unfolded) {
 
-            if (!uniq) {
-              //mirror
-              uniq = true;
-              for (int i=0; i<L; i++) {
-                if (nat->Elem(i)+cur_conf->Elem(i)!=2) {
-                  //fprintf(stderr, "%ld <-> %ld\n", nat->Elem(i), cur_conf->Elem(i));
-                  uniq = false;
-                  break;
-                }
+            // check whether the current conformation is identical to
+            // (or the mirror image of) one of the conformations
+            // already recorded for the current Emin
+            // Notes: mirror conf 0 <-> 2 (i.e. elem_a + elem_b == 2)
+            Vector *cur_conf = m -> get_current_conf();
+            bool is_new = true;
+
+            for (size_t k = 0; k < EminConfs.size() && is_new; k++) {
+
+              Vector *ref = EminConfs[k];
+              bool identical = true, mirror = true;
+
+              for (unsigned int i = 0; i < L; i++) {
+                if (ref->Elem(i) != cur_conf->Elem(i)) identical = false;
+                if (ref->Elem(i) + cur_conf->Elem(i) != 2) mirror = false;
+                if (!identical && !mirror) break;
               }
 
-              if (!uniq){
-                degeneracy = false;
-                fprintf(stderr, "new:\n");
-                cur_conf->PrintInt();
-              }
+              if (identical || mirror) is_new = false;
+
             }
+
+            if (is_new) {
+
+              if ((int)EminConfs.size() < DegeneracyThreshold) {
+                EminConfs.push_back(new Vector(*cur_conf));
+              }
+              else {
+                // more than 'DegeneracyThreshold' distinct ground
+                // state conformations exist --> "unfolded"
+                Unfolded = true;
+                for (size_t k = 0; k < EminConfs.size(); k++) delete EminConfs[k];
+                EminConfs.clear();
+              }
+
+            }
+
           }
           h -> CheckItinerancy(prev, MCMoves, MCMovesMem);
         }
@@ -507,15 +531,65 @@ void MonteCarlo::WangLandauSampling(Histogram* h, Model* m)
   printf("Accepted MC moves = %lu\n", MCMovesAccepted);
   printf("Acceptance ratio = %15.8e\n", double(MCMovesAccepted) / double(MCMoves));
 
-  if (degeneracy) {
-    fprintf(stderr, "Native conformation found!\n");
-    nat->PrintInt();
+  // ----- folding / degeneracy analysis -----
+  printf("\n### Folding Analysis ###################################\n\n");
+  printf(" Ground state energy (Emin)  %ld\n", Emin);
+  printf(" Degeneracy threshold (K)    %d\n", DegeneracyThreshold);
+
+  FILE* fres = fopen("fold_result.txt", "w");
+  fprintf(fres, "Emin  %ld\n", Emin);
+  fprintf(fres, "DegeneracyThreshold  %d\n", DegeneracyThreshold);
+
+  if (!Unfolded) {
+
+    printf(" Degeneracy                  %zu\n", EminConfs.size());
+    printf(" Result: FOLDABLE\n\n");
+    printf(" Ground state conformation(s) (length %u):\n", L);
+
+    fprintf(fres, "Degeneracy  %zu\n", EminConfs.size());
+    fprintf(fres, "Result  FOLDABLE\n");
+
+    for (size_t k = 0; k < EminConfs.size(); k++) {
+      printf("  [%zu] ", k + 1);
+      fprintf(fres, "Conformation_%zu  ", k + 1);
+      for (unsigned int i = 0; i < L; i++) {
+        printf("%ld", EminConfs[k]->Elem(i));
+        fprintf(fres, "%ld", EminConfs[k]->Elem(i));
+      }
+      printf("\n");
+      fprintf(fres, "\n");
+    }
+
+    // write all (<= K) distinct ground state conformations as a single
+    // multi-MODEL PDB file (only produced when the sequence is foldable)
+    FILE* fpdb = fopen("confsEmin.pdb", "w");
+    for (size_t k = 0; k < EminConfs.size(); k++)
+      m -> WriteConfPDB(EminConfs[k], fpdb);
+    fclose(fpdb);
+
   }
+  else {
+
+    printf(" Degeneracy                  > %d\n", DegeneracyThreshold);
+    printf(" Result: UNFOLDED\n");
+
+    fprintf(fres, "Degeneracy  >%d\n", DegeneracyThreshold);
+    fprintf(fres, "Result  UNFOLDED\n");
+
+    // not foldable: no conformation PDB is produced; remove any stale
+    // file possibly left over from a previous run
+    remove("confsEmin.pdb");
+
+  }
+
+  fclose(fres);
+
+  printf("\n#########################################################\n");
 
   h -> SaveState(0, "hdata_final.dat");
   h -> PrintNormDOS("dos.dat");
 
-  delete nat;
+  for (size_t k = 0; k < EminConfs.size(); k++) delete EminConfs[k];
 }
 
 
@@ -581,8 +655,6 @@ void MonteCarlo::MetropolisSampling(Model* m)
 
         if (-m -> observable[0] < Emin) {
           Emin = -m -> observable[0];
-          printf("New Emin = %ld ( MC moves = %lu )\n", Emin, MCMoves);
-          fflush(stdout);
           //m -> WriteState(1, "confsEmin.mol2");
           //m -> WriteState(3, "confsEmin.xyz");
           m -> WriteState(2, "confsEmin.pdb");

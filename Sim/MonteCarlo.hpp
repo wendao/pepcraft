@@ -101,6 +101,13 @@ private:
   unsigned long int MeasuringInterval;     // # MC steps between successive measurements
   double SamplingTemperature;              // sampling temperature
 
+  // maximal number of distinct ground state (Emin) conformations that
+  // are recorded; if the number of distinct ground state
+  // conformations found exceeds this threshold (K), the sequence is
+  // judged "unfolded"; otherwise (<= K) it is judged "foldable" and
+  // all distinct ground state conformations are reported
+  int DegeneracyThreshold;
+
   unsigned long int MCMoves;          // current # MC steps
   unsigned long int MCMovesAccepted;  // current # accepted MC steps
   unsigned long int MCMovesMem;
